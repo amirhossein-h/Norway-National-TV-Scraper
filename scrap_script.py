@@ -4,14 +4,13 @@
 #                                                                                                         #
 ###########################################################################################################
 
-import scrapy
 import argparse
-from selenium import webdriver
+from seleniumwire import webdriver
 from chromedriver_py import binary_path
 from selenium.webdriver.chrome.options import Options
 from time import sleep
 
-###########################################################################################################
+#####################################|||||----SET UP----|||||##############################################
 #Construct the argument parser and parse the argument
 ap = argparse.ArgumentParser()
 ap.add_argument('starturl', help= 'starting url for scrapping')
@@ -20,6 +19,8 @@ args = ap.parse_args()
 
 chrome_options = Options()
 chrome_options.add_argument("--headless")
+# chrome_options.add_argument("--start-maximized")
+# chrome_options.add_argument('--no-sandbox')
 
 ###########################################################################################################
 #                                                                                                         #
@@ -27,37 +28,49 @@ chrome_options.add_argument("--headless")
 #                                                                                                         #
 ###########################################################################################################
 
-# class UrlSpider(scrapy.Spider):
-#     name = 'nrk.no/skole'
-#     start_urls = ['https://www.nrk.no/skole/']#list(args['starturl'])
+# class UrlExtractor():
 
-#     def __init__(self):
+#     def __init__(self, mainUrl):
 #         self.full_list = {}
+#         self.url_counter = {}
+#         self.startUrl = mainUrl
 
-#     def parse(self, response):
-#         print('[Info]: Scrapping process started')
-#         mainP = response.xpath('//div[@class = "g100 col fc s12 sl18 sg6 sg9 group-reference"]')
-#         partOne = mainP.xpath('//div[@class = "g33 col fc s4 sl6 sl9 sl12 sl18 plug-reference relation flow-relation"]/div[@class = " widget lean plug lp_plug cf"]/a/@href').getall()
-#         partOne = list(set(partOne))
-#         partTwo = mainP.xpath('//div[@class = "g33 col fc s4 sl6 sl9 sl12 sl18 plug-reference relation flow-relation"]/div[@class = " widget brief plug lp_plug cf"]/a/@href').getall()
-#         partTwo = list(set(partTwo))
-#         allstartLinks = partOne + partTwo
-        
-#         for url in allstartLinks:
+#     def extractor(self):
+#         print('**********--[Info]: Scraping process started--**********')
+#         driver = webdriver.Chrome(executable_path = binary_path, options = chrome_options)
+#         sleep(2)
+#         print('**********--[Info]: Requesting MainUrl --> {}--**********'.format(self.startUrl))
+#         driver.get(self.startUrl)
+#         sleep(12)
+#         print('**********--[Info]: Extracting Mainpage urls--**********')
+#         partOne = driver.find_elements_by_xpath('//div[@class = "g33 col fc s4 sl6 sl9 sl12 sl18 plug-reference relation flow-relation"]/div[@class = " widget lean plug lp_plug cf"]/a')
+#         partOneLinks = [link.get_attribute('href') for link in partOne]
+#         partTwo = driver.find_elements_by_xpath('//div[@class = "g33 col fc s4 sl6 sl9 sl12 sl18 plug-reference relation flow-relation"]/div[@class = " widget brief plug lp_plug cf"]/a')
+#         partTwoLinks = [link.get_attribute('href') for link in partTwo]
+#         allMainUrls = partOneLinks + partTwoLinks
+#         driver.quit()
+#         print('**********--[Info]: Mainpage urls extracted--**********')
+#         sleep(2)
+
+#         for url in allMainUrls:
 #             driver = webdriver.Chrome(executable_path = binary_path, options = chrome_options)
-#             sleep(5)
-#             print("[Info]: Loading {}".format(url))
+#             sleep(2)
+#             print("**********--[Info]: Requesting {}--**********".format(url))
 #             driver.get(url)
-#             print("[Info]: Waiting to load {}".format(url))
-#             sleep(15)
+#             print("**********--[Info]: Waiting to load {}--**********".format(url))
+#             sleep(12)
+#             print('**********--[Info]: Extracting page urls--**********')
 #             anchores = driver.find_elements_by_xpath('//a[@class = "media-result-card"]')
 #             links = [link.get_attribute('href') for link in anchores]
-#             print("[Info]: Links in {} extracted".format(url))
+#             print("**********--[Info]: Urls in {} extracted--**********".format(url))
 #             self.full_list[url] = links
+#             self.url_counter[url] = len(links)
 #             driver.quit()
-#             sleep(5)
-        
-#         print(self.full_list)
+#             sleep(2)
+
+#         return self.full_list, len(allMainUrls), self.url_counter
+
+
 
 ###########################################################################################################
 
@@ -66,63 +79,88 @@ class UrlExtractor():
     def __init__(self, mainUrl):
         self.full_list = {}
         self.url_counter = {}
+        self.failedMainUrls = []
+        self.failedSubUrls = []
+        self.links = []
         self.startUrl = mainUrl
 
-    def extractor(self):
-        print('**********--[Info]: Scraping process started--**********')
-        driver = webdriver.Chrome(executable_path = binary_path, options = chrome_options)
-        sleep(2)
-        print('**********--[Info]: Requesting MainUrl --> {}--**********'.format(self.startUrl))
-        driver.get(self.startUrl)
-        sleep(12)
-        print('**********--[Info]: Extracting Mainpage urls--**********')
-        partOne = driver.find_elements_by_xpath('//div[@class = "g33 col fc s4 sl6 sl9 sl12 sl18 plug-reference relation flow-relation"]/div[@class = " widget lean plug lp_plug cf"]/a')
-        partOneLinks = [link.get_attribute('href') for link in partOne]
-        partTwo = driver.find_elements_by_xpath('//div[@class = "g33 col fc s4 sl6 sl9 sl12 sl18 plug-reference relation flow-relation"]/div[@class = " widget brief plug lp_plug cf"]/a')
-        partTwoLinks = [link.get_attribute('href') for link in partTwo]
-        allMainUrls = partOneLinks + partTwoLinks
-        driver.quit()
-        print('**********--[Info]: Mainpage urls extracted--**********')
-        sleep(2)
-
-        for url in allMainUrls:
+    def mainUrlExtractor(self):
+        try:
+            #Stage one- extracting url on the main page
+            print('**********--[Info]: Scraping process started--**********')
             driver = webdriver.Chrome(executable_path = binary_path, options = chrome_options)
             sleep(2)
-            print("**********--[Info]: Requesting {}--**********".format(url))
-            driver.get(url)
-            print("**********--[Info]: Waiting to load {}--**********".format(url))
+            print('**********--[Info]: Requesting MainUrl --> {}--**********'.format(self.startUrl))
+            driver.get(self.startUrl)
             sleep(12)
-            print('**********--[Info]: Extracting page urls--**********')
-            anchores = driver.find_elements_by_xpath('//a[@class = "media-result-card"]')
-            links = [link.get_attribute('href') for link in anchores]
-            print("**********--[Info]: Urls in {} extracted--**********".format(url))
-            self.full_list[url] = links
-            self.url_counter[url] = len(links)
+            print('**********--[Info]: Extracting Mainpage urls--**********')
+            partOne = driver.find_elements_by_xpath('//div[@class = "g33 col fc s4 sl6 sl9 sl12 sl18 plug-reference relation flow-relation"]/div[@class = " widget lean plug lp_plug cf"]/a')
+            partOneLinks = [link.get_attribute('href') for link in partOne]
+            partTwo = driver.find_elements_by_xpath('//div[@class = "g33 col fc s4 sl6 sl9 sl12 sl18 plug-reference relation flow-relation"]/div[@class = " widget brief plug lp_plug cf"]/a')
+            partTwoLinks = [link.get_attribute('href') for link in partTwo]
+            allMainUrls = partOneLinks + partTwoLinks
             driver.quit()
+            print('**********--[Info]: Mainpage urls extracted--**********')
             sleep(2)
+            return allMainUrls
+        except ValueError as e:
+            print(e)
 
-        return self.full_list, len(allMainUrls), self.url_counter
+    def subUrlExtractor(self, MainUrls, path, attr , level = 'One'):
+        #Stage two- extracting suburls in each main url
+        for url in MainUrls:
+            try:
+                driver = webdriver.Chrome(executable_path = binary_path, options = chrome_options)
+                sleep(2)
+                print("**********--[Info]: Requesting {}--**********".format(url))
+                driver.get(url)
+                print("**********--[Info]: Waiting to load {}--**********".format(url))
+                sleep(12)
+                print('**********--[Info]: Extracting page urls--**********')
+                if level == 'One':
+                    anchores = driver.find_elements_by_xpath(path)
+                    links = [link.get_attribute(attr) for link in anchores]
+                    print("**********--[Info]: Urls in {} extracted--**********".format(url))
+                    self.full_list[url] = links
+                    driver.quit()
+                    sleep(2)
+                elif level == 'Two':
+                    li = {}
+                    print('**********--[Info]: Extracting page url--**********')
+                    elem = driver.find_element_by_xpath(path)
+                    media_link = elem.get_attribute(attr)
+                    for request in driver.requests:
+                        if request.response:
+                            if request.url.endswith('.vtt'):
+                                subtitle_link = str(requst.url)
+                            else:
+                                subtitle_link = 'Not Found'
+                    li[media_link] = subtitle_link
+                    print("**********--[Info]: Urls in {} extracted--**********".format(url))
+                    self.links.append(li)
+                    driver.quit()
+                    sleep(2)
+            except ValueError as e:
+                print('\n**********--[Warning]: {}--**********\n'.format(e))
+                print('**********--[Notice]: Unsusccessfull extraction of related url(s) to {}--**********'.format(url))
+                if level == 'One':
+                    self.failedMainUrls.append(url)
+                elif level == 'Two':
+                    self.failedSubUrls.append(url)
+                driver.quit()
+                continue
 
+        if level == 'One':
+            return self.full_list
+        elif level == 'Two':
+            return self.links
 
-###########################################################################################################
+    def statistics(self):
+        numberOfMainUrls = len(self.full_list)
+        for k, v in self.full_list.items():
+            self.url_counter[k] = len(v)
 
-# class QueryResultSpider(scrapy.Spider):
-#     name = 'nrk.no/skole/#'
-
-#     def __init__(self, mainurls):
-#         self.urls = mainurls
-#         self.full_list = {}
-
-#     for url in self.urls:
-#         driver = webdriver.Chrome(executable_path = binary_path, options = chrome_options)
-#         driver.get(url)
-#         anchores = driver.find_elements_by_xpath('//a[@class = "media-result-card"]')
-#         links = [link.get_attribute('href') for link in anchores]
-#         self.full_list[url] = links
-
-#     def parse(self, response):
-#         mainP = response.xpath('//div[@class = "main-page"]/div[@class = "search-results page"]/div[@class = "search-results--content"]/div[@class = "search-results--content-clip-view"]/div[@class = "query-result"]/div[@class = "media-results--media-list"]')
-#         contentsurls = mainP.xpath('//a[@class = "media-result-card"]/@href').getall()
+        return numberOfMainUrls, self.url_counter, self.failedMainUrls, self.failedSubUrls
 
 
 ###########################################################################################################
@@ -130,15 +168,48 @@ class UrlExtractor():
 #                                         -Driver script-                                                 #
 #                                                                                                         #
 ###########################################################################################################
+#Making a url extractor object
+E = UrlExtractor(str(args.starturl))
+#Extracting urls on the mainpage
+mainUrls = E.mainUrlExtractor()
+#Extracting first level sub urls for each url on the mainpage
+path = '//a[@class = "media-result-card"]'
+attr = 'href'
+subUrlsLevelOne = E.subUrlExtractor(mainUrls, path, attr, level = 'One')
+#Extracting permanent link to the extracted urls in previous step
+pathTwo = '/html/body/div/div[3]/div/div/div/t-3-0-7/div/div/div[2]/div/div[1]/div/label/input'
+attrTwo = 'value'
+#Dcitionary that holds each url on the mainpage as key and its related urls as values
+full_list = {}
+#List that holds urls that their sub urls could not be extracted
+problematic = []
+print('**********--[Info]: Extracting permanent urls--**********')
+#Itereate on dictionary from second step to obtain permanent link to each url
+for k, v in subUrlsLevelOne.items():
+    if v:
+        subUrlLevelTwo = E.subUrlExtractor(v, pathTwo, attrTwo, level = 'Two')
+        full_list[k] = subUrlLevelTwo
+    else:
+        problematic.append(k)
 
-videoUrl, number_of_mainUrl, number_of_subUrl = UrlExtractor(str(args.starturl)).extractor()
+
+numberOfMainUrls, numberofSubUrls, mainfailed, subfailed = E.statistics()
 # with open('result.txt', 'w') as f:
 #     f.write(str(videoUrl))
 print('#######---extracted Urls---#######')
-print(videoUrl)
+print(full_list)
+print('\n')
+print('#######---Problematic Urls---#######')
+print(problematic)
+print('\n')
+print('#######---Mainfailed Urls---#######')
+print(mainfailed)
+print('\n')
+print('#######---Subfailed Urls---#######')
+print(subfailed)
 print('\n')
 print('#######---Number of main Urls---#######')
-print(number_of_mainUrl)
+print(numberOfMainUrls)
 print('\n')
 print('#######---Number of sub Urls---#######')
-print(number_of_subUrl)
+print(numberOfSubUrls)
